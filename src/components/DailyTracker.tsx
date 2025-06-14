@@ -73,7 +73,9 @@ const DailyTracker = () => {
         title: "Entry saved!",
         description: "Your pain tracking data has been recorded.",
       });
-      queryClient.invalidateQueries({ queryKey: ['todaysEntry', todayISO] });
+      setPainLevel(0);
+      setSymptoms([]);
+      setNotes("");
       queryClient.invalidateQueries({ queryKey: ['trends'] });
     },
     onError: (error) => {
