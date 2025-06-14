@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { Calendar, TrendingUp, TrendingDown, Activity } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown } from "lucide-react";
 
 const TrendsView = () => {
   const [entries, setEntries] = useState([]);
@@ -53,7 +54,7 @@ const TrendsView = () => {
 
   const symptomData = Object.entries(symptomCounts)
     .map(([symptom, count]) => ({ symptom, count }))
-    .sort((a, b) => b.count - a.count)
+    .sort((a, b) => (b.count as number) - (a.count as number))
     .slice(0, 6);
 
   const getTrendIcon = () => {
@@ -79,7 +80,7 @@ const TrendsView = () => {
                 <p className="text-3xl font-bold text-gray-800">{avgPainLevel}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Activity className="w-6 h-6 text-blue-600" />
+                <TrendingUp className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
