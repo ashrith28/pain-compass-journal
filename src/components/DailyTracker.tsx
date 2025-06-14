@@ -68,7 +68,7 @@ const DailyTracker = () => {
 
   const mutation = useMutation({
     mutationFn: upsertEntry,
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Entry saved!",
         description: "Your pain tracking data has been recorded.",
@@ -77,6 +77,24 @@ const DailyTracker = () => {
       setSymptoms([]);
       setNotes("");
       queryClient.invalidateQueries({ queryKey: ['trends'] });
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        try {
+          const { error } = await supabase.functions.invoke('send-entry-confirmation', {
+            body: { email: user.email },
+          });
+          if (error) throw error;
+          console.log('Confirmation email sent.');
+        } catch (error) {
+          console.error('Failed to send confirmation email:', error);
+          toast({
+            title: "Notification Error",
+            description: "Could not send the confirmation email.",
+            variant: "destructive",
+          });
+        }
+      }
     },
     onError: (error) => {
       toast({
