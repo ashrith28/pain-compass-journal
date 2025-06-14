@@ -7,8 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DailyTracker from "@/components/DailyTracker";
 import TrendsView from "@/components/TrendsView";
 import MedicationLog from "@/components/MedicationLog";
-import { Activity, TrendingUp, Pill, LogOut } from "lucide-react";
+import { Activity, TrendingUp, Pill, LogOut, UserCircle } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -50,19 +58,32 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       <div className="container mx-auto p-4 max-w-4xl">
-        <header className="text-center mb-8 pt-6 relative">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Pain Tracker</h1>
-          <p className="text-gray-600 text-lg">
-            Your personal health companion for managing chronic pain
-          </p>
-          <Button
-            variant="ghost"
-            onClick={handleSignOut}
-            className="absolute top-6 right-0 text-gray-600 hover:text-red-500"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+        <header className="flex justify-between items-center mb-8 pt-6">
+          <div className="text-left">
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">Pain Tracker</h1>
+            <p className="text-gray-600 text-lg">
+              Your personal health companion for managing chronic pain
+            </p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="rounded-full w-12 h-12">
+                <UserCircle className="w-8 h-8 text-gray-600" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <UserCircle className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         <Tabs defaultValue="today" className="w-full">
