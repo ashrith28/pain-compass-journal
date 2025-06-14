@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,17 @@ import { ArrowLeft } from "lucide-react";
 const Profile = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('');
     const { toast } = useToast();
     const navigate = useNavigate();
-    const user = supabase.auth.getUser();
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setEmail(user?.email || '');
+        };
+        fetchUser();
+    }, []);
 
     const handlePasswordUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,7 +52,7 @@ const Profile = () => {
                     <CardContent className="space-y-6">
                         <div>
                             <Label>Email</Label>
-                            <Input type="email" value={user.data?.user?.email || ''} disabled />
+                            <Input type="email" value={email} disabled />
                         </div>
                         <form onSubmit={handlePasswordUpdate} className="space-y-4">
                             <div className="space-y-2">
