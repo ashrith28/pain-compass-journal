@@ -1,31 +1,44 @@
-
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { Calendar, TrendingUp, TrendingDown } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const fetchPainEntries = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from('pain_entries')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('date', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data;
+};
 
 const TrendsView = () => {
-  const [entries, setEntries] = useState([]);
   const [avgPainLevel, setAvgPainLevel] = useState(0);
   const [painTrend, setPainTrend] = useState("stable");
 
+  const { data: entries = [], isLoading } = useQuery({
+    queryKey: ['trends'],
+    queryFn: fetchPainEntries,
+  });
+
   useEffect(() => {
-    const storedEntries = JSON.parse(localStorage.getItem('painEntries') || '[]');
-    const sortedEntries = storedEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    setEntries(sortedEntries);
+    if (entries.length > 0) {
+      const total = entries.reduce((sum, entry) => sum + (entry.pain_level || 0), 0);
+      setAvgPainLevel(Number((total / entries.length).toFixed(1)));
 
-    if (sortedEntries.length > 0) {
-      const total = sortedEntries.reduce((sum, entry) => sum + (entry.painLevel || 0), 0);
-      setAvgPainLevel(Number((total / sortedEntries.length).toFixed(1)));
-
-      // Calculate trend
-      if (sortedEntries.length >= 3) {
-        const recent = sortedEntries.slice(-3);
-        const older = sortedEntries.slice(-6, -3);
+      if (entries.length >= 3) {
+        const recent = entries.slice(-3);
+        const older = entries.slice(-6, -3);
         
         if (older.length > 0) {
-          const recentAvg = recent.reduce((sum, e) => sum + (e.painLevel || 0), 0) / recent.length;
-          const olderAvg = older.reduce((sum, e) => sum + (e.painLevel || 0), 0) / older.length;
+          const recentAvg = recent.reduce((sum, e) => sum + (e.pain_level || 0), 0) / recent.length;
+          const olderAvg = older.reduce((sum, e) => sum + (e.pain_level || 0), 0) / older.length;
           
           const diff = recentAvg - olderAvg;
           if (diff > 0.5) setPainTrend("increasing");
@@ -34,16 +47,15 @@ const TrendsView = () => {
         }
       }
     }
-  }, []);
+  }, [entries]);
 
   const chartData = entries.map(entry => ({
     date: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    painLevel: entry.painLevel || 0,
+    painLevel: entry.pain_level || 0,
     fullDate: entry.date
   }));
 
-  // Count symptoms frequency
-  const symptomCounts = {};
+  const symptomCounts: { [key: string]: number } = {};
   entries.forEach(entry => {
     if (entry.symptoms) {
       entry.symptoms.forEach(symptom => {
@@ -54,7 +66,7 @@ const TrendsView = () => {
 
   const symptomData = Object.entries(symptomCounts)
     .map(([symptom, count]) => ({ symptom, count }))
-    .sort((a, b) => (b.count as number) - (a.count as number))
+    .sort((a, b) => b.count - a.count)
     .slice(0, 6);
 
   const getTrendIcon = () => {
@@ -68,6 +80,20 @@ const TrendsView = () => {
     if (painTrend === "decreasing") return "text-green-600 bg-green-50 border-green-200";
     return "text-blue-600 bg-blue-50 border-blue-200";
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+        </div>
+        <Skeleton className="h-80 w-full" />
+        <Skeleton className="h-80 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

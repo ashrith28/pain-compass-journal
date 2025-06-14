@@ -1,5 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,31 +9,82 @@ import { useToast } from "@/hooks/use-toast";
 import PainLevelSelector from "./PainLevelSelector";
 import SymptomTracker from "./SymptomTracker";
 import { Calendar, Save } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const fetchTodaysEntry = async (date: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('pain_entries')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('date', date)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // Ignore 'no rows found'
+    throw new Error(error.message);
+  }
+  return data;
+};
+
+const upsertEntry = async (entry: { date: string, painLevel: number, symptoms: string[], notes: string }) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("User not logged in");
+
+  const { error } = await supabase
+    .from('pain_entries')
+    .upsert({ ...entry, user_id: user.id }, { onConflict: 'date,user_id' }); // Requires a unique constraint on (date, user_id)
+
+  if (error) throw new Error(error.message);
+};
 
 const DailyTracker = () => {
   const [painLevel, setPainLevel] = useState(0);
-  const [symptoms, setSymptoms] = useState([]);
+  const [symptoms, setSymptoms] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const todayISO = new Date().toISOString().split('T')[0];
+
+  const { data: entry, isLoading } = useQuery({
+    queryKey: ['todaysEntry', todayISO],
+    queryFn: () => fetchTodaysEntry(todayISO),
+  });
+
+  useEffect(() => {
+    if (entry) {
+      setPainLevel(entry.pain_level || 0);
+      setSymptoms(entry.symptoms || []);
+      setNotes(entry.notes || "");
+    }
+  }, [entry]);
+
+  const mutation = useMutation({
+    mutationFn: upsertEntry,
+    onSuccess: () => {
+      toast({
+        title: "Entry saved!",
+        description: "Your pain tracking data has been recorded.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['todaysEntry', todayISO] });
+      queryClient.invalidateQueries({ queryKey: ['trends'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error saving entry",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleSave = () => {
-    // In a real app, this would save to a database
-    const entry = {
-      date: new Date().toISOString().split('T')[0],
+    mutation.mutate({
+      date: todayISO,
       painLevel,
       symptoms,
       notes,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Save to localStorage for now
-    const existingEntries = JSON.parse(localStorage.getItem('painEntries') || '[]');
-    const updatedEntries = [entry, ...existingEntries.filter(e => e.date !== entry.date)];
-    localStorage.setItem('painEntries', JSON.stringify(updatedEntries));
-    
-    toast({
-      title: "Entry saved!",
-      description: "Your pain tracking data has been recorded.",
     });
   };
 
@@ -41,6 +94,18 @@ const DailyTracker = () => {
     month: 'long',
     day: 'numeric'
   });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -88,11 +153,12 @@ const DailyTracker = () => {
 
       <Button 
         onClick={handleSave}
+        disabled={mutation.isPending}
         size="lg"
         className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-semibold py-3 rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-[1.02]"
       >
         <Save className="w-5 h-5 mr-2" />
-        Save Today's Entry
+        {mutation.isPending ? "Saving..." : "Save Today's Entry"}
       </Button>
     </div>
   );
