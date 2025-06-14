@@ -32,9 +32,15 @@ const upsertEntry = async (entry: { date: string, painLevel: number, symptoms: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("User not logged in");
 
+  const { painLevel, ...restOfEntry } = entry;
+
   const { error } = await supabase
     .from('pain_entries')
-    .upsert({ ...entry, user_id: user.id }, { onConflict: 'date,user_id' }); // Requires a unique constraint on (date, user_id)
+    .upsert({
+      ...restOfEntry,
+      pain_level: painLevel,
+      user_id: user.id
+    }, { onConflict: 'date,user_id' });
 
   if (error) throw new Error(error.message);
 };
