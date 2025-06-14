@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { Calendar, TrendingUp, TrendingDown } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, Activity } from "lucide-react";
 
 const TrendsView = () => {
   const [entries, setEntries] = useState([]);
@@ -11,12 +10,12 @@ const TrendsView = () => {
 
   useEffect(() => {
     const storedEntries = JSON.parse(localStorage.getItem('painEntries') || '[]');
-    const sortedEntries = storedEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedEntries = storedEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     setEntries(sortedEntries);
 
     if (sortedEntries.length > 0) {
-      const total = sortedEntries.reduce((sum, entry) => sum + entry.painLevel, 0);
-      setAvgPainLevel((total / sortedEntries.length).toFixed(1));
+      const total = sortedEntries.reduce((sum, entry) => sum + (entry.painLevel || 0), 0);
+      setAvgPainLevel(Number((total / sortedEntries.length).toFixed(1)));
 
       // Calculate trend
       if (sortedEntries.length >= 3) {
@@ -24,8 +23,8 @@ const TrendsView = () => {
         const older = sortedEntries.slice(-6, -3);
         
         if (older.length > 0) {
-          const recentAvg = recent.reduce((sum, e) => sum + e.painLevel, 0) / recent.length;
-          const olderAvg = older.reduce((sum, e) => sum + e.painLevel, 0) / older.length;
+          const recentAvg = recent.reduce((sum, e) => sum + (e.painLevel || 0), 0) / recent.length;
+          const olderAvg = older.reduce((sum, e) => sum + (e.painLevel || 0), 0) / older.length;
           
           const diff = recentAvg - olderAvg;
           if (diff > 0.5) setPainTrend("increasing");
@@ -38,7 +37,7 @@ const TrendsView = () => {
 
   const chartData = entries.map(entry => ({
     date: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    painLevel: entry.painLevel,
+    painLevel: entry.painLevel || 0,
     fullDate: entry.date
   }));
 
