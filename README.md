@@ -1,8 +1,14 @@
-# Welcome to your Lovable project
+# 🧭 Pain Compass Journal
+
+A healthcare web app that helps users track and reflect on their pain journey.
+
+## 🚀 Live Demo
+
+[Click here to try Pain Compass Journal](https://pain-compass-journal.lovable.app/auth)
+
+[![Open Pain Compass Journal](https://img.shields.io/badge/Open-App-blue?style=for-the-badge)](https://pain-compass-journal.lovable.app/auth)
 
 ## Project info
-
-**URL**: https://lovable.dev/projects/2349f21d-dc5c-46b2-9725-4e95f4c5d1b2
 
 ## How can I edit this code?
 
